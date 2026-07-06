@@ -1,0 +1,40 @@
+<svg width="1280" height="320" viewBox="0 0 1280 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="planka-mcp-go">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="0.55" stop-color="#111a2e"/>
+      <stop offset="1" stop-color="#0d1b34"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <style>
+      .title { font: 700 68px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #f8fafc; }
+      .sub   { font: 400 26px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #94a3b8; }
+      .pill  { font: 600 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #cbd5e1; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="320" rx="20" fill="url(#bg)"/>
+  <rect x="1" y="1" width="1278" height="318" rx="19" fill="none" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Kanban board glyph -->
+  <g transform="translate(96 92)">
+    <rect x="0"   y="0"  width="40" height="136" rx="8" fill="url(#accent)" opacity="0.9"/>
+    <rect x="56"  y="0"  width="40" height="88"  rx="8" fill="url(#accent)" opacity="0.65"/>
+    <rect x="112" y="0"  width="40" height="112" rx="8" fill="url(#accent)" opacity="0.45"/>
+  </g>
+
+  <text x="300" y="150" class="title">planka-mcp-go</text>
+  <text x="302" y="196" class="sub">Model Context Protocol server for Planka — in Go</text>
+
+  <g transform="translate(302 232)">
+    <rect x="0"   y="0" width="86"  height="40" rx="20" fill="#0f172a" stroke="#334155"/>
+    <text x="43"  y="27" text-anchor="middle" class="pill">Go</text>
+    <rect x="102" y="0" width="112" height="40" rx="20" fill="#0f172a" stroke="#334155"/>
+    <text x="158" y="27" text-anchor="middle" class="pill">stdio</text>
+    <rect x="228" y="0" width="92"  height="40" rx="20" fill="#0f172a" stroke="#334155"/>
+    <text x="274" y="27" text-anchor="middle" class="pill">SSE</text>
+  </g>
+</svg>
