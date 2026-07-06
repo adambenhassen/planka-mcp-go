@@ -25,7 +25,7 @@ import (
 )
 
 // serverVersion is the MCP server version reported to clients.
-const serverVersion = "2.2.1"
+const serverVersion = "2.2.2"
 
 // tokenExpiryBuffer is how long before the cached token's expiry it is
 // considered stale (matching the TS 5-minute buffer).
