@@ -1,40 +1,32 @@
-<svg width="1280" height="320" viewBox="0 0 1280 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="planka-mcp-go">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Planka MCP Server — connect AI assistants to your Planka Kanban board">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0b1220"/>
-      <stop offset="0.55" stop-color="#111a2e"/>
-      <stop offset="1" stop-color="#0d1b34"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c4966"/>
+      <stop offset="1" stop-color="#0d2a3d"/>
     </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#38bdf8"/>
-      <stop offset="1" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
     </linearGradient>
-    <style>
-      .title { font: 700 68px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #f8fafc; }
-      .sub   { font: 400 26px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #94a3b8; }
-      .pill  { font: 600 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #cbd5e1; }
-    </style>
   </defs>
 
-  <rect width="1280" height="320" rx="20" fill="url(#bg)"/>
-  <rect x="1" y="1" width="1278" height="318" rx="19" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <rect width="1200" height="300" rx="20" fill="url(#bg)"/>
 
-  <!-- Kanban board glyph -->
-  <g transform="translate(96 92)">
-    <rect x="0"   y="0"  width="40" height="136" rx="8" fill="url(#accent)" opacity="0.9"/>
-    <rect x="56"  y="0"  width="40" height="88"  rx="8" fill="url(#accent)" opacity="0.65"/>
-    <rect x="112" y="0"  width="40" height="112" rx="8" fill="url(#accent)" opacity="0.45"/>
+  <!-- Kanban board motif -->
+  <g transform="translate(80, 78)">
+    <rect x="0"   y="0"  width="44" height="144" rx="8" fill="#ffffff" opacity="0.08"/>
+    <rect x="60"  y="0"  width="44" height="144" rx="8" fill="#ffffff" opacity="0.08"/>
+    <rect x="120" y="0"  width="44" height="144" rx="8" fill="#ffffff" opacity="0.08"/>
+    <rect x="8"   y="10" width="28" height="30" rx="5" fill="url(#accent)"/>
+    <rect x="8"   y="48" width="28" height="30" rx="5" fill="#ffffff" opacity="0.45"/>
+    <rect x="68"  y="10" width="28" height="30" rx="5" fill="#ffffff" opacity="0.45"/>
+    <rect x="68"  y="48" width="28" height="30" rx="5" fill="url(#accent)"/>
+    <rect x="68"  y="86" width="28" height="30" rx="5" fill="#ffffff" opacity="0.45"/>
+    <rect x="128" y="10" width="28" height="30" rx="5" fill="#ffffff" opacity="0.45"/>
   </g>
 
-  <text x="300" y="150" class="title">planka-mcp-go</text>
-  <text x="302" y="196" class="sub">Model Context Protocol server for Planka — in Go</text>
-
-  <g transform="translate(302 232)">
-    <rect x="0"   y="0" width="86"  height="40" rx="20" fill="#0f172a" stroke="#334155"/>
-    <text x="43"  y="27" text-anchor="middle" class="pill">Go</text>
-    <rect x="102" y="0" width="112" height="40" rx="20" fill="#0f172a" stroke="#334155"/>
-    <text x="158" y="27" text-anchor="middle" class="pill">stdio</text>
-    <rect x="228" y="0" width="92"  height="40" rx="20" fill="#0f172a" stroke="#334155"/>
-    <text x="274" y="27" text-anchor="middle" class="pill">SSE</text>
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="320" y="138" font-size="64" font-weight="700" fill="#ffffff">Planka MCP Server</text>
+    <text x="322" y="186" font-size="28" font-weight="400" fill="#9fd4ef">Connect AI assistants to your Planka Kanban board</text>
   </g>
 </svg>
