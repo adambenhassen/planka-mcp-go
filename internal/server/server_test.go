@@ -124,6 +124,40 @@ func TestMissingPathParam(t *testing.T) {
 	}
 }
 
+func TestInvalidActionErrorUsesDefinitionOrder(t *testing.T) {
+	s := newTestServer("http://unused.example")
+	res := s.ExecuteGroupedAPICall(t.Context(), findTool(t, "cards"), map[string]any{"action": "bogus"})
+	if res.Success {
+		t.Fatal("expected failure for invalid action")
+	}
+	want := "Invalid action 'bogus'. Valid actions: list, get, create, update, delete"
+	if res.Err != want {
+		t.Errorf("error = %q, want %q", res.Err, want)
+	}
+}
+
+func TestNumericPathID(t *testing.T) {
+	rec := &capture{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec.record(r)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := newTestServer(srv.URL)
+	// JSON-RPC arguments decode numbers as float64; a numeric id must still route.
+	res := s.ExecuteGroupedAPICall(t.Context(), findTool(t, "projects"), map[string]any{
+		"action": "get",
+		"id":     float64(42),
+	})
+	if !res.Success {
+		t.Fatalf("expected success, got %q", res.Err)
+	}
+	if rec.paths[0] != "/api/projects/42" {
+		t.Errorf("path = %q, want /api/projects/42", rec.paths[0])
+	}
+}
+
 func TestQueryFlattening(t *testing.T) {
 	rec := &capture{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

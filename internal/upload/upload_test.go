@@ -122,6 +122,22 @@ func TestResolveBytesFallbackFilename(t *testing.T) {
 	}
 }
 
+func TestResolveBytesKeepsPercentEncodedFilename(t *testing.T) {
+	srv := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		if _, err := w.Write([]byte("X")); err != nil {
+			t.Errorf("write: %v", err)
+		}
+	})
+	out, err := upload.ResolveBytes(t.Context(), map[string]any{"url": srv.URL + "/a%20b.png"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Filename != "a%20b.png" {
+		t.Errorf("filename = %q, want a%%20b.png (raw pathname, matching TS)", out.Filename)
+	}
+}
+
 func TestResolveBytesOctetStreamFallback(t *testing.T) {
 	srv := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		// No Content-Type set and none sniffed.

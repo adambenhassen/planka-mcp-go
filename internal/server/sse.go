@@ -28,30 +28,30 @@ type sseSession struct {
 	closed  bool
 }
 
-// send writes an SSE event with the given name and data to the client.
-func (sess *sseSession) send(event, data string) {
-	sess.mu.Lock()
-	defer sess.mu.Unlock()
-	if sess.closed {
-		return
-	}
-	if _, err := io.WriteString(sess.writer, "event: "+event+"\ndata: "+data+"\n\n"); err != nil {
-		return
-	}
-	sess.flusher.Flush()
+// send writes an SSE event with the given name and data to the client,
+// reporting whether the write succeeded.
+func (sess *sseSession) send(event, data string) bool {
+	return sess.write("event: " + event + "\ndata: " + data + "\n\n")
 }
 
-// comment writes an SSE comment (used as a heartbeat) to the client.
-func (sess *sseSession) comment(text string) {
+// comment writes an SSE comment (used as a heartbeat) to the client, reporting
+// whether the write succeeded.
+func (sess *sseSession) comment(text string) bool {
+	return sess.write(": " + text + "\n\n")
+}
+
+// write emits a raw SSE frame under the session lock, reporting success.
+func (sess *sseSession) write(frame string) bool {
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
 	if sess.closed {
-		return
+		return false
 	}
-	if _, err := io.WriteString(sess.writer, ": "+text+"\n\n"); err != nil {
-		return
+	if _, err := io.WriteString(sess.writer, frame); err != nil {
+		return false
 	}
 	sess.flusher.Flush()
+	return true
 }
 
 // sseSessions is the concurrency-safe registry of active SSE sessions.
@@ -170,9 +170,6 @@ func (s *Server) handleSSE(serverCtx context.Context, sessions *sseSessions) htt
 		sessions.add(sess)
 		s.logger.Info("client connected", "sessionId", sess.id, "activeClients", sessions.count())
 
-		// Tell the client where to POST messages for this session.
-		sess.send("endpoint", "/messages?sessionId="+sess.id)
-
 		ticker := time.NewTicker(heartbeatInterval)
 		defer ticker.Stop()
 
@@ -185,6 +182,12 @@ func (s *Server) handleSSE(serverCtx context.Context, sessions *sseSessions) htt
 		}
 		defer cleanup()
 
+		// Tell the client where to POST messages for this session; bail (cleaning
+		// up) if the connection is already gone.
+		if !sess.send("endpoint", "/messages?sessionId="+sess.id) {
+			return
+		}
+
 		for {
 			select {
 			case <-r.Context().Done():
@@ -192,7 +195,9 @@ func (s *Server) handleSSE(serverCtx context.Context, sessions *sseSessions) htt
 			case <-serverCtx.Done():
 				return
 			case <-ticker.C:
-				sess.comment("heartbeat")
+				if !sess.comment("heartbeat") {
+					return
+				}
 			}
 		}
 	}

@@ -56,9 +56,10 @@ func (s *Server) handleMessage(ctx context.Context, raw []byte) (response []byte
 		}), false
 	}
 
-	// A message without an id is a notification: dispatch side effects (none
-	// currently) and return no response.
-	if len(req.ID) == 0 || string(req.ID) == "null" {
+	// A message without an id member is a notification: dispatch side effects
+	// (none currently) and return no response. A present id (including null) is
+	// a request and receives a response, per JSON-RPC 2.0.
+	if len(req.ID) == 0 {
 		return nil, true
 	}
 

@@ -261,20 +261,37 @@ func asMap(v any) map[string]any {
 	return nil
 }
 
+// actionOrder returns the tool's action names in definition order, taken from
+// the schema's action enum (matching the TS Object.keys order used in the
+// invalid-action error). It falls back to sorted operation keys.
+func actionOrder(def tools.GroupedToolDefinition) []string {
+	if prop, ok := def.InputSchema.Properties["action"].(map[string]any); ok {
+		if enum, ok := prop["enum"].([]string); ok {
+			return enum
+		}
+	}
+	keys := make([]string, 0, len(def.Operations))
+	for k := range def.Operations {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
 //nolint:gocyclo // Faithful 1:1 port of the TS executeGroupedApiCall control flow (path resolution, auth, retries, and compat fallbacks) kept in one function for parity.
 func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, input map[string]any, st callState) APIResult {
+	// Stop retry recursion promptly if the caller cancelled between attempts.
+	if err := ctx.Err(); err != nil {
+		return APIResult{Err: err.Error()}
+	}
+
 	action := asString(input["action"])
 	if action == "" {
 		return APIResult{Err: "Missing required 'action' parameter"}
 	}
 	op, ok := def.Operations[action]
 	if !ok {
-		valid := make([]string, 0, len(def.Operations))
-		for name := range def.Operations {
-			valid = append(valid, name)
-		}
-		slices.Sort(valid)
-		return APIResult{Err: "Invalid action '" + action + "'. Valid actions: " + strings.Join(valid, ", ")}
+		return APIResult{Err: "Invalid action '" + action + "'. Valid actions: " + strings.Join(actionOrder(def), ", ")}
 	}
 
 	actualPath := op.Path
@@ -282,7 +299,7 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 		actualPath = st.overridePath
 	}
 
-	id := asString(input["id"])
+	id := jsTruthyString(input["id"])
 	data := asMap(input["data"])
 
 	for _, param := range pathParamPattern.FindAllString(actualPath, -1) {

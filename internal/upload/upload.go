@@ -116,7 +116,9 @@ func fetchURLBytes(ctx context.Context, rawURL, name string) (out ResolvedBytes,
 
 	filename := name
 	if filename == "" {
-		filename = urlBasename(parsed.Path)
+		// EscapedPath keeps percent-encoding, matching Node's URL.pathname so the
+		// derived multipart filename is identical to the TS server's.
+		filename = urlBasename(parsed.EscapedPath())
 	}
 	if filename == "" {
 		filename = "upload"
