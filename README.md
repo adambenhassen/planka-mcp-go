@@ -1,11 +1,10 @@
 <p align="center">
-  <img src=".github/assets/banner.svg" alt="planka-mcp-go" width="100%">
+  <img src=".github/assets/banner-v2.svg" alt="planka-mcp-go" width="100%">
 </p>
 
 <p align="center">
   A <a href="https://modelcontextprotocol.io">Model Context Protocol</a> server that exposes a
   <a href="https://planka.app">Planka</a> instance — projects, boards, cards, comments, attachments and more — to MCP clients.
-  A 1:1 Go port of the TypeScript <code>planka-mcp</code> server.
 </p>
 
 <p align="center">
@@ -111,4 +110,4 @@ golangci-lint run           # lint
 
 ## Credits
 
-A Go port of the original TypeScript `planka-mcp` server, tracking its behavior 1:1.
+Based on the original [`planka-mcp`](https://github.com/adambenhassen/planka-mcp) server.
