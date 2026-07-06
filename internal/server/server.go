@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -108,7 +108,7 @@ func LoadConfig() Config {
 type Server struct {
 	cfg        Config
 	httpClient *http.Client
-	logger     *log.Logger
+	logger     *slog.Logger
 	tools      []tools.GroupedToolDefinition
 	toolMap    map[string]tools.GroupedToolDefinition
 	counts     tools.Counts
@@ -132,7 +132,7 @@ func New(cfg Config) *Server {
 	return &Server{
 		cfg:        cfg,
 		httpClient: &http.Client{},
-		logger:     log.New(os.Stderr, "", 0),
+		logger:     slog.New(slog.NewTextHandler(os.Stderr, nil)),
 		tools:      enabled,
 		toolMap:    toolMap,
 		counts:     tools.ToolCounts(),
@@ -387,8 +387,9 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 	if err != nil {
 		if st.retryAttempt < s.cfg.MaxRetries {
 			delay := s.cfg.RetryBaseDelay << st.retryAttempt
-			s.logger.Printf("[retry] network error for %s.%s (%s %s), attempt %s failed, retrying in %dms: %v",
-				def.Name, action, op.Method, actualPath, s.formatAttempt(st.retryAttempt), delay.Milliseconds(), err)
+			s.logger.Warn("network error, retrying",
+				"tool", def.Name, "action", action, "method", op.Method, "path", actualPath,
+				"attempt", s.formatAttempt(st.retryAttempt), "delayMs", delay.Milliseconds(), "error", err)
 			sleepCtx(ctx, delay)
 			st.retryAttempt++
 			return s.execute(ctx, def, input, st)
@@ -420,8 +421,8 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 
 	if status == http.StatusUnauthorized && requiresAuth && s.cfg.APIKey == "" && s.hasCachedToken() && !st.unauthorizedRetried {
 		s.clearToken()
-		s.logger.Printf("[auth] received 401 for %s.%s (%s %s); clearing cached token and retrying once",
-			def.Name, action, op.Method, actualPath)
+		s.logger.Warn("received 401; clearing cached token and retrying once",
+			"tool", def.Name, "action", action, "method", op.Method, "path", actualPath)
 		st.unauthorizedRetried = true
 		return s.execute(ctx, def, input, st)
 	}
@@ -434,8 +435,8 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 		}
 		fallbackPath := strings.Replace(templatePath, "customFieldId:{customFieldId}", "customFieldId:${customFieldId}", 1)
 		if fallbackPath != templatePath {
-			s.logger.Printf("[compat] 404 for %s.%s using %s; retrying with legacy custom field path variant",
-				def.Name, action, actualPath)
+			s.logger.Warn("404; retrying with legacy custom field path variant",
+				"tool", def.Name, "action", action, "path", actualPath)
 			st.overridePath, st.hasOverride = fallbackPath, true
 			st.allowCustomFieldDollarFallback = false
 			return s.execute(ctx, def, input, st)
@@ -444,15 +445,16 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 
 	if shouldRetryStatus(status) && st.retryAttempt < s.cfg.MaxRetries {
 		delay := s.cfg.RetryBaseDelay << st.retryAttempt
-		s.logger.Printf("[retry] transient HTTP %d for %s.%s (%s %s), attempt %s failed, retrying in %dms",
-			status, def.Name, action, op.Method, actualPath, s.formatAttempt(st.retryAttempt), delay.Milliseconds())
+		s.logger.Warn("transient HTTP status, retrying",
+			"status", status, "tool", def.Name, "action", action, "method", op.Method, "path", actualPath,
+			"attempt", s.formatAttempt(st.retryAttempt), "delayMs", delay.Milliseconds())
 		sleepCtx(ctx, delay)
 		st.retryAttempt++
 		return s.execute(ctx, def, input, st)
 	}
 
-	s.logger.Printf("[error] API call failed for %s.%s (%s %s) with HTTP %d",
-		def.Name, action, op.Method, actualPath, status)
+	s.logger.Error("API call failed",
+		"tool", def.Name, "action", action, "method", op.Method, "path", actualPath, "status", status)
 	return APIResult{Err: "HTTP " + strconv.Itoa(status) + ": " + truncate(stringifyData(respData), 2000)}
 }
 

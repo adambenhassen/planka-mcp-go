@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -119,12 +120,13 @@ func (s *Server) ServeSSE(ctx context.Context, port int) error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			s.logger.Printf("[error] SSE server shutdown: %v", err)
+			s.logger.Error("SSE server shutdown", "error", err)
 		}
 	}()
 
-	s.logger.Printf("Planka MCP server (SSE) listening on http://localhost:%d", port)
-	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	s.logger.Info("Planka MCP server (SSE) listening",
+		"port", port, "tools", len(s.tools), "heartbeatSeconds", int(heartbeatInterval/time.Second))
+	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
@@ -166,7 +168,7 @@ func (s *Server) handleSSE(serverCtx context.Context, sessions *sseSessions) htt
 
 		sess := &sseSession{id: newSessionID(), writer: w, flusher: flusher}
 		sessions.add(sess)
-		s.logger.Printf("Client connected: %s (%d active clients)", sess.id, sessions.count())
+		s.logger.Info("client connected", "sessionId", sess.id, "activeClients", sessions.count())
 
 		// Tell the client where to POST messages for this session.
 		sess.send("endpoint", "/messages?sessionId="+sess.id)
@@ -179,7 +181,7 @@ func (s *Server) handleSSE(serverCtx context.Context, sessions *sseSessions) htt
 			sess.closed = true
 			sess.mu.Unlock()
 			sessions.remove(sess.id)
-			s.logger.Printf("Client disconnected: %s (%d active clients)", sess.id, sessions.count())
+			s.logger.Info("client disconnected", "sessionId", sess.id, "activeClients", sessions.count())
 		}
 		defer cleanup()
 
@@ -258,7 +260,7 @@ func (s *Server) handleHealth(sessions *sseSessions) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(body); err != nil {
-			s.logger.Printf("[error] health encode: %v", err)
+			s.logger.Error("health encode failed", "error", err)
 		}
 	}
 }

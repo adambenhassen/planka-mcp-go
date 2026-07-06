@@ -89,7 +89,7 @@ func (s *Server) handleMessage(ctx context.Context, raw []byte) (response []byte
 func (s *Server) marshalResponse(resp rpcResponse) []byte {
 	out, err := json.Marshal(resp)
 	if err != nil {
-		s.logger.Printf("[error] failed to marshal response: %v", err)
+		s.logger.Error("failed to marshal response", "error", err)
 		return nil
 	}
 	return out
