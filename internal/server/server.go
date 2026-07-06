@@ -34,6 +34,14 @@ const tokenExpiryBuffer = 5 * time.Minute
 // tokenLifetime is how long a freshly fetched token is treated as valid.
 const tokenLifetime = 24 * time.Hour
 
+// httpClientTimeout bounds a single forwarded Planka API call so a half-open
+// connection cannot hang a request forever (the upload client sets its own).
+const httpClientTimeout = 60 * time.Second
+
+// maxRetryBackoff caps the exponential retry backoff, guarding against the
+// int64 shift overflow (which wraps negative) that a large MaxRetries would hit.
+const maxRetryBackoff = 30 * time.Second
+
 // knownIDParams are the multi-segment path parameters that fall back to the
 // top-level id field when not supplied in data.
 var knownIDParams = []string{
@@ -68,7 +76,7 @@ type Config struct {
 }
 
 // envInt reads an integer environment variable, returning def when unset or
-// unparseable, mirroring the TS parseInt(..., 10) with a numeric default.
+// unparseable. Unlike JS parseInt, the whole value must be a valid integer.
 func envInt(key string, def int) int {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
@@ -131,7 +139,7 @@ func New(cfg Config) *Server {
 	}
 	return &Server{
 		cfg:        cfg,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: httpClientTimeout},
 		logger:     slog.New(slog.NewTextHandler(os.Stderr, nil)),
 		tools:      enabled,
 		toolMap:    toolMap,
@@ -162,7 +170,7 @@ func (s *Server) clearToken() {
 
 // getAccessToken returns a valid bearer token, using the cache when fresh and
 // authenticating against Planka otherwise.
-func (s *Server) getAccessToken(ctx context.Context) (string, error) {
+func (s *Server) getAccessToken(ctx context.Context) (token string, err error) {
 	s.tokenMu.Lock()
 	defer s.tokenMu.Unlock()
 
@@ -212,6 +220,9 @@ func (s *Server) getAccessToken(ctx context.Context) (string, error) {
 	}
 	if err := json.Unmarshal(text, &parsed); err != nil {
 		return "", err
+	}
+	if parsed.Item == "" {
+		return "", errors.New("Authentication succeeded but Planka returned no token.")
 	}
 	s.cachedToken = parsed.Item
 	s.tokenExpiry = time.Now().Add(tokenLifetime)
@@ -304,12 +315,13 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 
 	for _, param := range pathParamPattern.FindAllString(actualPath, -1) {
 		name := param[1 : len(param)-1]
+		ds := dataString(data, name)
 		value, has := "", false
 		switch {
 		case name == "id" && id != "":
 			value, has = id, true
-		case dataString(data, name) != "":
-			value, has = dataString(data, name), true
+		case ds != "":
+			value, has = ds, true
 		case id != "" && slices.Contains(knownIDParams, name):
 			value, has = id, true
 		}
@@ -403,7 +415,7 @@ func (s *Server) execute(ctx context.Context, def tools.GroupedToolDefinition, i
 	res, err := s.httpClient.Do(req)
 	if err != nil {
 		if st.retryAttempt < s.cfg.MaxRetries {
-			delay := s.cfg.RetryBaseDelay << st.retryAttempt
+			delay := s.backoffDelay(st.retryAttempt)
 			s.logger.Warn("network error, retrying",
 				"tool", def.Name, "action", action, "method", op.Method, "path", actualPath,
 				"attempt", s.formatAttempt(st.retryAttempt), "delayMs", delay.Milliseconds(), "error", err)
@@ -480,8 +492,28 @@ func (s *Server) formatAttempt(attempt int) string {
 	return strconv.Itoa(attempt+1) + "/" + strconv.Itoa(s.cfg.MaxRetries+1)
 }
 
-// dataString returns data[key] as a non-empty string, or "" when absent, empty,
-// or not a string.
+// backoffDelay returns the exponential retry backoff for the given attempt,
+// capped at maxRetryBackoff and guarded against int64 shift overflow (a large
+// MaxRetries would otherwise wrap the delay negative, collapsing backoff into a
+// tight retry loop).
+func (s *Server) backoffDelay(attempt int) time.Duration {
+	base := s.cfg.RetryBaseDelay
+	if base <= 0 {
+		return 0
+	}
+	if attempt < 0 {
+		return base
+	}
+	delay := base << attempt
+	if delay>>attempt != base || delay > maxRetryBackoff {
+		return maxRetryBackoff
+	}
+	return delay
+}
+
+// dataString returns data[key] stringified for path substitution via
+// jsTruthyString: strings pass through and non-zero numbers/true become their
+// string form, while absent or JS-falsy values (nil, "", 0, false) yield "".
 func dataString(data map[string]any, key string) string {
 	if data == nil {
 		return ""

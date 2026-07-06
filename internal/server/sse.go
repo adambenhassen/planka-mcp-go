@@ -17,6 +17,10 @@ import (
 // timing out an idle connection.
 const heartbeatInterval = 30 * time.Second
 
+// maxMessageBytes caps a single POSTed JSON-RPC message so a client cannot force
+// an unbounded read into memory.
+const maxMessageBytes = 4 << 20 // 4 MiB
+
 // sseSession is a single connected SSE client. Its ResponseWriter is written to
 // both by its own heartbeat loop and by /messages POST handlers, so all writes
 // are serialized through mu.
@@ -223,9 +227,9 @@ func (s *Server) handleMessages(ctx context.Context, sessions *sseSessions) http
 			return
 		}
 
-		payload, err := io.ReadAll(r.Body)
+		payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxMessageBytes))
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+			writeJSONError(w, http.StatusRequestEntityTooLarge, "Request body too large or unreadable")
 			return
 		}
 
@@ -237,7 +241,9 @@ func (s *Server) handleMessages(ctx context.Context, sessions *sseSessions) http
 		}
 
 		if !isNotification && resp != nil {
-			sess.send("message", string(resp))
+			if !sess.send("message", string(resp)) {
+				s.logger.Warn("failed to deliver response to SSE client", "sessionId", sessionID)
+			}
 		}
 	}
 }
