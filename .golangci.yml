@@ -63,6 +63,13 @@ linters:
     errcheck:
       check-blank: true
       check-type-assertions: true
+    staticcheck:
+      # ST1005 disabled: user-facing error/result strings are copied verbatim
+      # from the upstream TypeScript server (capitalized, ending in a period)
+      # to preserve 1:1 message parity, which tests assert on.
+      checks:
+        - all
+        - -ST1005
   exclusions:
     rules:
       - path: _test\.go

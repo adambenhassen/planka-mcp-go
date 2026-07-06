@@ -91,7 +91,7 @@ var UsersTool = GroupedToolDefinition{
 	},
 	InputSchema: BuildGroupedSchema(
 		[]string{"list", "create", "update", "delete", "updateEmail", "updatePassword", "updateUsername", "updateAvatar", "createApiKey"},
-		map[string]string{
+		map[string]string{ //nolint:gosec // G101 false positive: these are human-readable action descriptions, not credentials.
 			"list":           "List all users",
 			"create":         "Create a new user",
 			"update":         "Update user profile",
